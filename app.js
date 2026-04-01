@@ -72,42 +72,52 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ════════════════════════════════════════════════════════
-//  Endpoint detection
+//  Endpoint detection — silent, non-blocking
 //
-//  Probes /api/rpc with a 4-second timeout.
-//  On Vercel:     probe succeeds → proxyEndpoint set
-//  On vercel dev: probe succeeds → proxyEndpoint set
-//  Plain local:   probe fails    → proxyEndpoint stays null
-//                                  reads fall back to studionet direct
-//                                  writes will show actionable error
+//  Environment         proxyEndpoint       readEndpoint
+//  ─────────────────   ─────────────────   ─────────────────────────
+//  Vercel production   /api/rpc (full URL) /api/rpc  → full ✓
+//  vercel dev local    /api/rpc (full URL) /api/rpc  → full ✓
+//  localhost / file:// null                studionet → reads only ✓
+//
+//  No scary warnings at boot. Writes show a clear error only when
+//  the user actually tries to submit — not on page load.
 // ════════════════════════════════════════════════════════
 async function detectEndpoint() {
-  // file:// protocol has no origin — skip probe entirely
-  if (window.location.protocol === 'file:') {
-    termLog('warn', 'Opened as file:// — proxy unavailable');
-    termLog('info', 'Deploy to Vercel or run: npx vercel dev');
-    readEndpoint = STUDIONET_DIRECT;
-    return;
-  }
+  // Build proxy candidate URL.
+  // file:// origin is "null" string — handle gracefully.
+  var origin = window.location.origin;
+  var isLocal = (origin === 'null' || origin === '' ||
+                 window.location.protocol === 'file:' ||
+                 origin.startsWith('http://localhost') ||
+                 origin.startsWith('http://127.0.0.1'));
 
-  var candidate = window.location.origin + '/api/rpc';
-  termLog('info', 'Checking proxy: ' + candidate);
+  if (!isLocal) {
+    // On a real domain (Vercel) — probe the proxy
+    var candidate = origin + '/api/rpc';
+    var ok = await fetchWithTimeout(candidate, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'gen_dbg_ping', params: [] }),
+    }, 4000);
 
-  var ok = await fetchWithTimeout(candidate, {
-    method:  'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'gen_dbg_ping', params: [] }),
-  }, 4000);
-
-  if (ok) {
-    proxyEndpoint = candidate;
-    readEndpoint  = candidate;
-    termLog('success', 'Proxy online ✓ → all requests via ' + candidate);
+    if (ok) {
+      proxyEndpoint = candidate;
+      readEndpoint  = candidate;
+      termLog('success', 'Proxy ✓ — all requests through ' + candidate);
+    } else {
+      // Proxy not found on a real domain — unexpected, log it
+      proxyEndpoint = null;
+      readEndpoint  = STUDIONET_DIRECT;
+      termLog('warn', 'Proxy at ' + candidate + ' not responding — reads via studionet direct');
+    }
   } else {
+    // Local environment — no proxy, use studionet direct for reads
+    // Writes will show a helpful error only when the user tries to submit
     proxyEndpoint = null;
     readEndpoint  = STUDIONET_DIRECT;
-    termLog('warn', 'Proxy not found — reads via studionet direct');
-    termLog('warn', 'Writes require proxy → deploy to Vercel or run: npx vercel dev');
+    termLog('info', 'Local mode — reads via studionet direct ✓');
+    termLog('info', 'Writes need proxy → deploy to Vercel for full functionality');
   }
 }
 
@@ -213,7 +223,7 @@ function _buildClient() {
   // (writes will fail with CORS if using studionet direct, but
   //  contractWrite() catches this and shows a clear error)
   var ep = proxyEndpoint || STUDIONET_DIRECT;
-  termLog('info', 'Client endpoint: ' + ep + (proxyEndpoint ? ' (proxy ✓)' : ' (no proxy — writes will fail)'));
+  termLog('info', 'Client endpoint: ' + ep);
   client = _gl.createClient({
     chain:    _chains.studionet,
     account:  account,    // always createAccount() — real signing key
@@ -425,9 +435,10 @@ async function contractWrite(functionName, args) {
   args = args || [];
   if (!client) throw new Error('Connect your wallet first.');
 
-  // GUARD: proxy is required for all writes — fail fast with clear message
+  // GUARD: proxy is required for all writes (CORS blocks direct browser→studionet)
   if (!proxyEndpoint) {
-    var msg = 'Proxy required for writes. Deploy to Vercel or run: npx vercel dev';
+    var msg = 'Submitting requires a live deployment. ' +
+              'Open the app on your Vercel URL (not locally) to write to the contract.';
     termLog('error', msg);
     throw new Error(msg);
   }
@@ -447,8 +458,7 @@ async function contractWrite(functionName, args) {
     // Surface CORS errors specifically
     if (err.message && (err.message.includes('NetworkError') || err.message.includes('fetch'))) {
       throw new Error(
-        'Network error — CORS blocked. The proxy at ' + (proxyEndpoint || '/api/rpc') +
-        ' is not reachable. Deploy to Vercel or run: npx vercel dev'
+        'Network error — open the app on your Vercel URL to submit transactions.'
       );
     }
     throw err;

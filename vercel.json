@@ -2,7 +2,7 @@
   "version": 2,
   "functions": {
     "api/rpc.js": {
-      "runtime": "nodejs18.x",
+      "runtime": "nodejs24.x",
       "maxDuration": 60
     }
   }
