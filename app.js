@@ -55,9 +55,8 @@ let termOpen         = true;
 // ════════════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', function() {
   termLog('info', 'EngageChain — ' + CONTRACT_ADDRESS);
-  detectEndpoint().then(function() {
-    refreshTotalSubmissions();
-  });
+  detectEndpoint();
+  refreshTotalSubmissions();
 
   document.getElementById('wallet-modal').addEventListener('click', function(e) {
     if (e.target.id === 'wallet-modal') closeModal();
@@ -72,70 +71,34 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ════════════════════════════════════════════════════════
-//  Endpoint detection — silent, non-blocking
+//  Endpoint detection — simple and reliable
 //
-//  Environment         proxyEndpoint       readEndpoint
-//  ─────────────────   ─────────────────   ─────────────────────────
-//  Vercel production   /api/rpc (full URL) /api/rpc  → full ✓
-//  vercel dev local    /api/rpc (full URL) /api/rpc  → full ✓
-//  localhost / file:// null                studionet → reads only ✓
+//  Only ONE case has no proxy: file:// (HTML opened directly).
+//  Every other case — localhost via server.js OR Vercel — has a
+//  working /api/rpc endpoint at the same origin.
 //
-//  No scary warnings at boot. Writes show a clear error only when
-//  the user actually tries to submit — not on page load.
+//  Local:  node server.js → http://localhost:3001/api/rpc  ✓
+//  Vercel: deploy         → https://app.vercel.app/api/rpc ✓
+//  file:// reads only     → studionet direct               ✓
 // ════════════════════════════════════════════════════════
-async function detectEndpoint() {
-  // Build proxy candidate URL.
-  // file:// origin is "null" string — handle gracefully.
+function detectEndpoint() {
+  var proto  = window.location.protocol;
   var origin = window.location.origin;
-  var isLocal = (origin === 'null' || origin === '' ||
-                 window.location.protocol === 'file:' ||
-                 origin.startsWith('http://localhost') ||
-                 origin.startsWith('http://127.0.0.1'));
 
-  if (!isLocal) {
-    // On a real domain (Vercel) — probe the proxy
-    var candidate = origin + '/api/rpc';
-    var ok = await fetchWithTimeout(candidate, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'gen_dbg_ping', params: [] }),
-    }, 4000);
+  // file:// has no server — proxy doesn't exist
+  var noProxy = (proto === 'file:' || origin === 'null' || origin === '');
 
-    if (ok) {
-      proxyEndpoint = candidate;
-      readEndpoint  = candidate;
-      termLog('success', 'Proxy ✓ — all requests through ' + candidate);
-    } else {
-      // Proxy not found on a real domain — unexpected, log it
-      proxyEndpoint = null;
-      readEndpoint  = STUDIONET_DIRECT;
-      termLog('warn', 'Proxy at ' + candidate + ' not responding — reads via studionet direct');
-    }
-  } else {
-    // Local environment — no proxy, use studionet direct for reads
-    // Writes will show a helpful error only when the user tries to submit
+  if (noProxy) {
     proxyEndpoint = null;
     readEndpoint  = STUDIONET_DIRECT;
-    termLog('info', 'Local mode — reads via studionet direct ✓');
-    termLog('info', 'Writes need proxy → deploy to Vercel for full functionality');
+    termLog('info', 'File mode — reads via studionet ✓  (run: node server.js for full access)');
+  } else {
+    // HTTP or HTTPS server is running (localhost:3001 or Vercel)
+    // /api/rpc exists in both cases
+    proxyEndpoint = origin + '/api/rpc';
+    readEndpoint  = proxyEndpoint;
+    termLog('success', 'Ready — proxy: ' + proxyEndpoint);
   }
-}
-
-// fetch with manual timeout — no AbortSignal.timeout (not in all browsers)
-function fetchWithTimeout(url, options, ms) {
-  return new Promise(function(resolve) {
-    var done  = false;
-    var timer = setTimeout(function() {
-      if (!done) { done = true; resolve(false); }
-    }, ms);
-    fetch(url, options)
-      .then(function(r) {
-        if (!done) { done = true; clearTimeout(timer); resolve(r.ok); }
-      })
-      .catch(function() {
-        if (!done) { done = true; clearTimeout(timer); resolve(false); }
-      });
-  });
 }
 
 // ════════════════════════════════════════════════════════
@@ -437,8 +400,7 @@ async function contractWrite(functionName, args) {
 
   // GUARD: proxy is required for all writes (CORS blocks direct browser→studionet)
   if (!proxyEndpoint) {
-    var msg = 'Submitting requires a live deployment. ' +
-              'Open the app on your Vercel URL (not locally) to write to the contract.';
+    var msg = 'Open via a server to write: run "node server.js" then go to http://localhost:3001';
     termLog('error', msg);
     throw new Error(msg);
   }
