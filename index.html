@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EngageChain — AI-Native Opinion Protocol</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <div class="noise"></div>
+
+  <!-- ══ WALLET MODAL ════════════════════════════════════════════════════════ -->
+  <div class="modal-overlay hidden" id="wallet-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-icon">◈</span>
+        <h2 class="modal-title">Connect Wallet</h2>
+        <p class="modal-sub">Choose how to connect to GenLayer studionet.</p>
+      </div>
+      <div class="modal-body">
+        <div class="wallet-option" id="modal-auto-btn" onclick="connectAuto()" tabindex="0" role="button">
+          <div class="wallet-option-icon">⚡</div>
+          <div class="wallet-option-info">
+            <div class="wallet-option-title">Auto Connect</div>
+            <div class="wallet-option-desc">Instant testnet wallet — no setup. Auto-funded on studionet.</div>
+          </div>
+          <div class="wallet-option-arrow">→</div>
+        </div>
+        <div class="wallet-divider"><span>or</span></div>
+        <div class="wallet-option" id="modal-mm-btn" onclick="connectMetaMask()" tabindex="0" role="button">
+          <div class="wallet-option-icon">🦊</div>
+          <div class="wallet-option-info">
+            <div class="wallet-option-title">MetaMask</div>
+            <div class="wallet-option-desc">Connect your MetaMask wallet via browser extension (EIP-1193).</div>
+          </div>
+          <div class="wallet-option-arrow">→</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-ghost" onclick="closeModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ HEADER ═══════════════════════════════════════════════════════════════ -->
+  <header class="header">
+    <div class="header-inner">
+      <div class="logo">
+        <span class="logo-mark">◈</span>
+        <span class="logo-text">EngageChain</span>
+        <span class="logo-tag">TESTNET</span>
+      </div>
+      <nav class="nav">
+        <a href="#submit"  class="nav-link">Submit</a>
+        <a href="#lookup"  class="nav-link">Lookup</a>
+        <a href="#about"   class="nav-link">Protocol</a>
+        <button class="btn-connect" onclick="openModal()">
+          <span class="btn-dot" id="connect-dot"></span>
+          <span id="connect-label">Connect Wallet</span>
+        </button>
+        <button class="btn-disconnect hidden" id="btn-disconnect" onclick="disconnectWallet()">
+          ✕ Disconnect
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- ══ HERO ══════════════════════════════════════════════════════════════════ -->
+  <section class="hero">
+    <div class="hero-grid"></div>
+    <div class="hero-content">
+      <div class="hero-eyebrow">
+        <span class="pulse-dot"></span> Powered by GenLayer Optimistic Democracy
+      </div>
+      <h1 class="hero-title">
+        Opinions,<br/>
+        <span class="hero-accent">Verified.</span><br/>
+        On-Chain.
+      </h1>
+      <p class="hero-desc">
+        Submit any opinion or proposal. AI evaluates it, validators
+        reach consensus, and the result is stored on-chain permanently.
+      </p>
+      <div class="hero-stats">
+        <div class="stat">
+          <span class="stat-num" id="stat-total">—</span>
+          <span class="stat-label">Submissions</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat">
+          <span class="stat-num">GenLayer</span>
+          <span class="stat-label">Network</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat">
+          <span class="stat-num">LLM</span>
+          <span class="stat-label">AI Engine</span>
+        </div>
+      </div>
+    </div>
+    <div class="hero-visual">
+      <div class="orb orb-1"></div>
+      <div class="orb orb-2"></div>
+      <div class="flow-diagram">
+        <div class="flow-node">
+          <span class="fn-icon">✍</span>
+          <span class="fn-label">Human Input</span>
+        </div>
+        <div class="flow-arrow">
+          <span class="flow-line"></span>
+          <svg width="16" height="16" viewBox="0 0 16 16"><path d="M8 0l8 8-8 8V0z" fill="currentColor"/></svg>
+        </div>
+        <div class="flow-node">
+          <span class="fn-icon">◉</span>
+          <span class="fn-label">AI Eval</span>
+        </div>
+        <div class="flow-arrow">
+          <span class="flow-line"></span>
+          <svg width="16" height="16" viewBox="0 0 16 16"><path d="M8 0l8 8-8 8V0z" fill="currentColor"/></svg>
+        </div>
+        <div class="flow-node">
+          <span class="fn-icon">⬡</span>
+          <span class="fn-label">Consensus</span>
+        </div>
+        <div class="flow-arrow">
+          <span class="flow-line"></span>
+          <svg width="16" height="16" viewBox="0 0 16 16"><path d="M8 0l8 8-8 8V0z" fill="currentColor"/></svg>
+        </div>
+        <div class="flow-node">
+          <span class="fn-icon">⛓</span>
+          <span class="fn-label">On-Chain</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ SUBMIT ════════════════════════════════════════════════════════════════ -->
+  <section class="submit-section" id="submit">
+    <div class="section-container">
+      <div class="section-label">01 — SUBMIT</div>
+      <h2 class="section-title">Submit Your Opinion</h2>
+      <p class="section-sub">Write an opinion, proposal, or dispute. Connect your wallet to sign the transaction.</p>
+
+      <div class="submit-card">
+        <div class="submit-card-inner">
+
+          <!-- ── TERMINAL — above the text input ── -->
+          <div class="terminal-panel" id="terminal-panel">
+            <div class="term-header" onclick="toggleTerminal()" style="cursor:pointer">
+              <div class="term-dots">
+                <span class="term-dot td-red"></span>
+                <span class="term-dot td-yellow"></span>
+                <span class="term-dot td-green"></span>
+              </div>
+              <div class="term-title">engagechain — genlayer tx log</div>
+              <div class="term-right">
+                <span class="term-contract">0x1ccA…143F0</span>
+                <button class="term-toggle-btn" id="term-toggle" title="Toggle terminal">
+                  <span id="term-chevron">▼</span>
+                </button>
+              </div>
+            </div>
+            <div class="term-body" id="term-body">
+              <!-- Seeded by app.js on DOMContentLoaded -->
+            </div>
+          </div>
+          <!-- ── END TERMINAL ── -->
+
+          <!-- Not connected -->
+          <div id="not-connected-msg" class="not-connected">
+            <span class="nc-icon">◈</span>
+            <div>
+              <div class="nc-title">Wallet not connected</div>
+              <div class="nc-sub">Connect your GenLayer wallet to submit opinions.</div>
+            </div>
+            <button class="btn-primary" onclick="openModal()">Connect Wallet</button>
+          </div>
+
+          <!-- Connected form -->
+          <div id="connected-form" class="hidden">
+            <div class="connected-indicator">
+              <span class="dot-green"></span>
+              <span id="connected-addr">—</span>
+            </div>
+
+            <div class="field-group">
+              <label class="field-label">
+                <span>Your Opinion / Proposal</span>
+                <span class="char-count" id="char-count">0 / 2000</span>
+              </label>
+              <textarea
+                id="opinion-text"
+                class="opinion-textarea"
+                placeholder="Write your opinion, proposal, or dispute here…"
+                maxlength="2000"
+                rows="5"
+                oninput="updateCharCount()"
+              ></textarea>
+            </div>
+
+            <div class="submit-meta">
+              <div class="meta-item">
+                <span class="meta-dot dot-pending"></span>
+                <span>pending → evaluated → finalized</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-icon">◉</span>
+                <span>LLM analysis included</span>
+              </div>
+            </div>
+
+            <div class="submit-actions">
+              <button class="btn-primary" onclick="submitOpinion()">
+                <span class="btn-spinner hidden" id="submit-spinner">⟳</span>
+                <span id="submit-label">Submit to GenLayer</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Submit result -->
+          <div class="submit-result hidden" id="submit-result">
+            <div class="result-header">
+              <span class="result-icon">✓</span>
+              <span>Opinion submitted · ID: <strong id="result-id">—</strong></span>
+            </div>
+            <div class="result-row">
+              <span class="result-key">Status</span>
+              <span class="status-badge status-pending" id="result-status">pending</span>
+            </div>
+            <div class="result-row">
+              <span class="result-key">Tx Hash</span>
+              <span class="result-val monospace small" id="result-tx">—</span>
+            </div>
+            <button class="btn-secondary mt-8" onclick="evaluateOpinion()">
+              <span class="btn-spinner hidden" id="eval-spinner">⟳</span>
+              <span id="eval-label">▶ Evaluate with AI</span>
+            </button>
+          </div>
+
+          <!-- AI result -->
+          <div class="ai-result hidden" id="ai-result">
+            <div class="ai-result-header">
+              <span class="ai-badge">◉ AI Response</span>
+              <span class="ai-badge-consensus">⬡ Consensus reached</span>
+            </div>
+            <div class="ai-body">
+              <div class="ai-field"><span class="ai-key">Summary</span><span class="ai-val" id="ai-summary">—</span></div>
+              <div class="ai-field"><span class="ai-key">Sentiment</span><span class="ai-val" id="ai-sentiment">—</span></div>
+              <div class="ai-field"><span class="ai-key">Category</span><span class="ai-val" id="ai-category">—</span></div>
+              <div class="ai-field"><span class="ai-key">Key Points</span><ul class="ai-list" id="ai-points"></ul></div>
+              <div class="ai-field"><span class="ai-key">Recommendation</span><span class="ai-val ai-rec" id="ai-recommendation">—</span></div>
+              <div class="ai-field">
+                <span class="ai-key">Confidence</span>
+                <div class="confidence-bar-wrap">
+                  <div class="confidence-bar" id="confidence-bar"></div>
+                  <span class="confidence-val" id="confidence-val">—</span>
+                </div>
+              </div>
+            </div>
+            <button class="btn-primary mt-8" onclick="finalizeOpinion()">
+              <span class="btn-spinner hidden" id="final-spinner">⟳</span>
+              <span id="final-label">⬡ Finalize on-chain</span>
+            </button>
+          </div>
+
+          <!-- Finalized -->
+          <div class="finalized-banner hidden" id="finalized-banner">
+            <span class="fin-icon">⛓</span>
+            <div>
+              <div class="fin-title">Opinion Finalized</div>
+              <div class="fin-sub">Consensus verdict recorded on-chain via Optimistic Democracy.</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ LOOKUP ════════════════════════════════════════════════════════════════ -->
+  <section class="lookup-section" id="lookup">
+    <div class="section-container">
+      <div class="section-label">02 — LOOKUP</div>
+      <h2 class="section-title">Read from Chain</h2>
+      <p class="section-sub">Enter an opinion ID. The result will be printed in the terminal above.</p>
+      <div class="lookup-row">
+        <input type="text" id="lookup-id" class="lookup-input" placeholder='Opinion ID (e.g. "0")' />
+        <button class="btn-primary" onclick="lookupOpinion()">
+          <span class="btn-spinner hidden" id="lookup-spinner">⟳</span>
+          <span id="lookup-label">Read from Chain</span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ PROTOCOL ══════════════════════════════════════════════════════════════ -->
+  <section class="about-section" id="about">
+    <div class="section-container">
+      <div class="section-label">03 — PROTOCOL</div>
+      <h2 class="section-title">How It Works</h2>
+      <div class="protocol-grid">
+        <div class="protocol-card">
+          <div class="pc-num">01</div><div class="pc-icon">✍</div>
+          <h3 class="pc-title">Human Input</h3>
+          <p class="pc-desc">Connect your wallet and submit any opinion, proposal, or dispute. Recorded on-chain with a unique ID.</p>
+        </div>
+        <div class="protocol-card">
+          <div class="pc-num">02</div><div class="pc-icon">◉</div>
+          <h3 class="pc-title">AI Evaluation</h3>
+          <p class="pc-desc">The contract calls the LLM via <code>gl.nondet.exec_prompt()</code> and returns a structured JSON verdict.</p>
+        </div>
+        <div class="protocol-card">
+          <div class="pc-num">03</div><div class="pc-icon">⬡</div>
+          <h3 class="pc-title">Optimistic Democracy</h3>
+          <p class="pc-desc">GenLayer validators compare results using the <em>Equivalence Principle</em>. Equivalent outputs reach consensus.</p>
+        </div>
+        <div class="protocol-card">
+          <div class="pc-num">04</div><div class="pc-icon">⛓</div>
+          <h3 class="pc-title">On-Chain Record</h3>
+          <p class="pc-desc">The final verdict is stored permanently. Anyone can verify the opinion, AI response, and status.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ FOOTER ════════════════════════════════════════════════════════════════ -->
+  <footer class="footer">
+    <div class="footer-inner">
+      <div class="footer-logo"><span class="logo-mark">◈</span> EngageChain</div>
+      <div class="footer-links">
+        <span class="footer-item">Built on GenLayer</span>
+        <span class="footer-sep">·</span>
+        <span class="footer-item">Intelligent Contracts</span>
+        <span class="footer-sep">·</span>
+        <span class="footer-item">Optimistic Democracy</span>
+      </div>
+      <div class="footer-note">Testnet · Not for production use</div>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
